@@ -6,6 +6,14 @@
 
 //=============================================================================
 
+#define Break_If_Spu_Error(spu)                                         \
+    {                                                                   \
+        int error = SpuVerify(spu);                                     \
+        if (error != 0) {                                               \
+            SpuDump(spu, __FILE__, __FUNCTION__, __LINE__);             \
+            break;                                                      \
+        }                                                               \
+    }
 
 #define Return_If_Spu_Error(spu)                                        \
     {                                                                   \
@@ -45,7 +53,10 @@ enum SpuErr_t {
     Spu_Size_Error      = 1 << 4
 };
 
-void SpuCtor(const char* file_name, SPU_t *spu);
+int SpuCtor(const char* file_name, SPU_t *spu);
 void SpuDtor(SPU_t *spu);
+
+int SpuVerify(SPU_t *spu);
+void SpuDump(SPU_t *spu, const char *file_name, const char *function_name, int line_number);
 
 #endif // SPU_H_INCLUDED

@@ -166,7 +166,7 @@ void StackDump(Stack_t *stk, const char *file_name, const char *function_name, i
     }
 
     fprintf(SEREGA, "Stack [%p]\n", stk);
-    fprintf(SEREGA, "Stack [%p]\n", stk);
+    //fprintf(SEREGA, "Stack [%p]\n", stk);
 
     if (error & Buffer_Error) {
 

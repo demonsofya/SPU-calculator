@@ -19,13 +19,20 @@ int main()
 
     bool flag = true;
 
-    while (spu.counter < spu.commands_count && flag) {
-//printf("Itarration of bin cycle number %d. Curr command is %d\n", counter, code[counter]);
 
-        switch(spu.code[spu.counter]){
+//-----------------------------------------------------------------------------
+SpuDump(&spu, __FILE__, __FUNCTION__, __LINE__);
+//-----------------------------------------------------------------------------
+
+    while (spu.counter < spu.commands_count && flag) {
+printf("Itarration of bin cycle number %d. Curr command is %d\n", spu.counter, spu.code[spu.counter]);
+
+        Break_If_Spu_Error(&spu);
+
+        switch(spu.code[spu.counter++]) {
 
             case PUSH:
-                StackPush(&spu.stk, spu.code[++spu.counter]);
+                StackPush(&spu.stk, spu.code[spu.counter++]);
                 break;
 
             case ADD: {
@@ -68,7 +75,7 @@ int main()
                 int result = 0;
                 StackPop(&spu.stk, &result);
 
-                printf("Result is %d\n", result);
+                printf("\nResult is %d\n\n", result);
 
                 break;
             }
@@ -107,7 +114,7 @@ int main()
             }
 
             case POPREG:
-                switch(spu.code[++spu.counter]) {
+                switch(spu.code[spu.counter++]) {
                     case AX:
                         StackPop(&spu.stk, &spu.AX);
                         break;
@@ -120,6 +127,10 @@ int main()
                         StackPop(&spu.stk, &spu.CX);
                         break;
 
+                    case DX:
+                        StackPop(&spu.stk, &spu.CX);
+                        break;
+
                     default:
                         break;
                 }
@@ -127,7 +138,7 @@ int main()
                 break;
 
             case PUSHREG:
-                switch(spu.code[++spu.counter]) {
+                switch(spu.code[spu.counter++]) {
                     case AX:
                         StackPush(&spu.stk, spu.AX);
                         break;
@@ -137,6 +148,10 @@ int main()
                         break;
 
                     case CX:
+                        StackPush(&spu.stk, spu.CX);
+                        break;
+
+                    case DX:
                         StackPush(&spu.stk, spu.CX);
                         break;
 
@@ -155,6 +170,94 @@ int main()
                 break;
             }
 
+            case JUMP: {
+                spu.counter = spu.code[spu.counter++];
+            }
+
+            case JB: {
+                int num_1 = 0;
+                int num_2 = 0;
+                StackPop(&spu.stk, &num_2);
+                StackPop(&spu.stk, &num_1);
+
+                if (num_1 < num_2)
+                    spu.counter = spu.code[spu.counter++];
+                else
+                    spu.counter++;
+
+                break;
+            }
+
+            case JBE: {
+                int num_1 = 0;
+                int num_2 = 0;
+                StackPop(&spu.stk, &num_2);
+                StackPop(&spu.stk, &num_1);
+
+                if (num_1 <= num_2)
+                    spu.counter = spu.code[spu.counter++];
+                else
+                    spu.counter++;
+
+                break;
+            }
+
+            case JA: {
+                int num_1 = 0;
+                int num_2 = 0;
+                StackPop(&spu.stk, &num_2);
+                StackPop(&spu.stk, &num_1);
+
+                if (num_1 > num_2)
+                    spu.counter = spu.code[spu.counter++];
+                else
+                    spu.counter++;
+
+                break;
+            }
+
+            case JAE: {
+                int num_1 = 0;
+                int num_2 = 0;
+                StackPop(&spu.stk, &num_2);
+                StackPop(&spu.stk, &num_1);
+
+                if (num_1 >= num_2)
+                    spu.counter = spu.code[spu.counter++];
+                else
+                    spu.counter++;
+
+                break;
+            }
+
+            case JE: {
+                int num_1 = 0;
+                int num_2 = 0;
+                StackPop(&spu.stk, &num_2);
+                StackPop(&spu.stk, &num_1);
+
+                if (num_1 == num_2)
+                    spu.counter = spu.code[spu.counter++];
+                else
+                    spu.counter++;
+
+                break;
+            }
+
+            case JNE: {
+                int num_1 = 0;
+                int num_2 = 0;
+                StackPop(&spu.stk, &num_2);
+                StackPop(&spu.stk, &num_1);
+
+                if (num_1 != num_2)
+                    spu.counter = spu.code[spu.counter++];
+                else
+                    spu.counter++;
+
+                break;
+            }
+
             case HLT:
                 flag = false;
                 break;
@@ -165,7 +268,10 @@ int main()
 
         }
 
-        spu.counter++;
+    }
+
+    SpuDtor(&spu);
+        //spu.counter++;
         /*if (code[counter] == PUSH)
             StackPush(&stk_bin, code[++counter]);
 
@@ -242,15 +348,13 @@ int main()
             break;
 
         counter++;*/
-    }
-
-    SpuDtor(&spu);
 
     //-----------------------------------------------------------------------------
-//printf("Half of programm is solved\n");
+//printf("\n\nHalf of programm is solved\n\n");
     //-----------------------------------------------------------------------------
 
 
+    /*
     size_t file_size = 0;
     char *buffer = GetBuffer("task_rewrite.txt", &file_size);
     int ptr_array_size = StringsCount(buffer);
@@ -266,7 +370,7 @@ int main()
     flag = true;
     while (counter < ptr_array_size && flag) {
         sscanf(text_ptr_array[counter], "%d", &command);
-//printf("Itarration of another cycle number %d. Curr command is %d\n", counter, command);
+printf("Itarration of another cycle number %d. Curr command is %d\n", counter, command);
 
         switch (command) {
             case PUSH: {
@@ -349,6 +453,61 @@ int main()
                 break;
             }
 
+            case POPREG: {
+                int curr_number = 0;
+                sscanf(text_ptr_array[counter], "%*d %d", &curr_number);
+
+                switch(curr_number) {
+                    case AX:
+                        StackPop(&stk, &spu.AX);
+                        break;
+
+                    case BX:
+                        StackPop(&stk, &spu.BX);
+                        break;
+
+                    case CX:
+                        StackPop(&stk, &spu.CX);
+                        break;
+
+                    default:
+                        break;
+                }
+
+                break;
+            }
+
+            case PUSHREG: {
+                int curr_number = 0;
+                sscanf(text_ptr_array[counter], "%*d %d", &curr_number);
+
+                switch(curr_number) {
+                    case AX:
+                        StackPush(&stk, spu.AX);
+                        break;
+
+                    case BX:
+                        StackPush(&stk, spu.BX);
+                        break;
+
+                    case CX:
+                        StackPush(&stk, spu.CX);
+                        break;
+
+                    default:
+                        break;
+                }
+
+                break;
+            }
+
+            case JUMP: {
+                int curr_num = 0;
+                sscanf(text_ptr_array[counter], "%*d %d", &curr_num);
+
+                counter = curr_num - 1;
+            }
+
             case HLT:
                 flag = false;
                 break;
@@ -360,6 +519,7 @@ int main()
 
         counter++;
     }
+    */
 
 
 
