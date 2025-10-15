@@ -36,12 +36,17 @@
 
 struct SPU_t {
     Stack_t stk;
+    Stack_t ret_addr;
+    int RAM[100];
     int *code;
     int commands_count;
     int counter;
     int AX;
     int BX;
     int CX;
+    int RV;
+    int version = 6;
+    int signature = 451;
 };
 
 enum SpuErr_t {
@@ -50,11 +55,15 @@ enum SpuErr_t {
     Code_Error          = 1 << 1,
     Counter_Error       = 1 << 2,
     Spu_Pointer_Error   = 1 << 3,
-    Spu_Size_Error      = 1 << 4
+    Spu_Size_Error      = 1 << 4,
+    Spu_Version_Error   = 1 << 5,
+    Spu_Signature_Error = 1 << 6
 };
 
 int SpuCtor(const char* file_name, SPU_t *spu);
 void SpuDtor(SPU_t *spu);
+
+void SpuRun(SPU_t *spu);
 
 int SpuVerify(SPU_t *spu);
 void SpuDump(SPU_t *spu, const char *file_name, const char *function_name, int line_number);
