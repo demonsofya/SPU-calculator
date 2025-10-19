@@ -13,11 +13,11 @@
 int main() {
 
     SPU_t spu = {};
-    int error = SpuCtor("task_bin.txt", &spu);
+    SpuCtor("task_bin.txt", &spu);
     Return_If_Spu_Error(&spu)
 
 //-----------------------------------------------------------------------------
-SpuDump(&spu, __FILE__, __FUNCTION__, __LINE__);
+    ON_DEBUG(SpuDump(&spu, __FILE__, __FUNCTION__, __LINE__));
 //-----------------------------------------------------------------------------
 
     SpuRun(&spu);

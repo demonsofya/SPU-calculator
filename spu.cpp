@@ -6,390 +6,421 @@
 #include "../include/commands.h"
 #include "stack.h"
 #include "math.h"
+#include "assert.h"
+#include "buffer.h"
 
 #define SEREGA stderr
 
+//=============================================================================
 
-int SpuCtor(const char* file_name, SPU_t *spu) {
+int CheckVersionAndSignature(SPU_t *spu, FILE *file_ptr) {
 
-    FILE *file_ptr = fopen(file_name, "rb");
-    struct stat file_info = {};
-    stat(file_name, &file_info);
-
-    //spu->version = 6;
-    //spu->signature = 451;
+    if (spu == NULL || file_ptr == NULL)
+        return Spu_Pointer_Error;
 
     int version = 0;
     fread(&version, 1, sizeof(int), file_ptr);
+
     int signature = 0;
     fread(&signature, 1, sizeof(int), file_ptr);
 
     if (spu->version != version) {
+
         printf("Version check is wrong.\n");
         return Spu_Version_Error;
     }
+
     if (spu->signature != signature) {
+
         printf("Signature check is wrong.\n");
         return Spu_Signature_Error;
     }
 
-    spu->code = (int *) calloc(1, file_info.st_size);
-    fread(spu->code, 1, file_info.st_size, file_ptr);
-    spu->commands_count = file_info.st_size / sizeof(int);
+    return No_Spu_Error;
+}
+
+//-----------------------------------------------------------------------------
+
+int CodeCtor(SPU_t *spu, size_t file_size, FILE *file_ptr) {
+
+    if (spu == NULL || file_ptr == NULL)
+        return Spu_Pointer_Error;
+
+    spu->code = (int *) calloc(1, file_size);
+    fread(spu->code, 1, file_size, file_ptr);
+
+    spu->commands_count = file_size / COMMAND_SIZE;
     spu->counter = 0;
+
+    return No_Spu_Error;
+}
+
+//-----------------------------------------------------------------------------
+
+int RAMCtor(SPU_t *spu) {
+
+    if (spu == NULL)
+        return Spu_Pointer_Error;
+
+    spu->RAM = (int *) calloc(RAM_DEFAULT_SIZE, sizeof(int));
+    spu->ram_size = RAM_DEFAULT_SIZE;
+
+    return No_Spu_Error;
+}
+
+//-----------------------------------------------------------------------------
+
+int SpuCtor(const char* file_name, SPU_t *spu) {
+
+    if (spu == NULL || file_name == NULL)
+        return Spu_Pointer_Error;
+
+    FILE *file_ptr = fopen(file_name, "rb");
+
+    int file_size = GetFileSize(file_name);
+
+    int signature_error = CheckVersionAndSignature(spu, file_ptr);
+    if (signature_error != No_Spu_Error)
+        return signature_error;
+
+    CodeCtor(spu, file_size, file_ptr);
 
     StackCtor(&spu->stk, 10);
     StackCtor(&spu->ret_addr, 1);
 
-    spu->RAM = [];
+    RAMCtor(spu);
 
     fclose(file_ptr);
 
     Return_Spu_Error(spu);
 }
 
-void SpuRun(SPU_t *spu) {
+//=============================================================================
 
-    bool end_of_reading = true;
+int RunBinaryMathOperation(SPU_t *spu, int command) {
 
-    while (spu->counter < spu->commands_count && end_of_reading) {
-//printf("Itarration of bin cycle number %d. Curr command is %d\n", spu->counter, spu->code[spu->counter]);
+    Return_If_Spu_Error(spu);
 
-        Break_If_Spu_Error(spu);
+    int first_num = 0;
+    int second_num = 0;
 
-//SpuDump(spu, __FILE__, __FUNCTION__, __LINE__);
+    StackPop(&spu->stk, &second_num);
+    StackPop(&spu->stk, &first_num);
 
-        switch(spu->code[spu->counter++]) {
+    int calculation_result = 0;
 
-            case PUSH:
-                StackPush(&spu->stk, spu->code[spu->counter++]);
-                break;
+    switch(command) {
+        case ADD:
+            calculation_result = first_num + second_num;
+            break;
 
-            case ADD: {
-                int first_num = 0;
-                int second_num = 0;
+        case SUB:
+            calculation_result = first_num - second_num;
+            break;
 
-                StackPop(&spu->stk, &first_num);
-                StackPop(&spu->stk, &second_num);
+        case DIV:
+            calculation_result = first_num / second_num;
+            break;
 
-                StackPush(&spu->stk, first_num + second_num);
+        case MUL:
+            calculation_result = first_num * second_num;
+            break;
 
-                break;
-            }
+        case POW:
+            calculation_result = int(pow(first_num, second_num));
+            break;
 
-            case SUB: {
-                int second_num = 0;
-                int first_num = 0;
+        default:
+            return Spu_Command_Error;
+            break;
+    }
 
-                StackPop(&spu->stk, &second_num);
-                StackPop(&spu->stk, &first_num);
 
-                StackPush(&spu->stk, first_num - second_num);
+    StackPush(&spu->stk, calculation_result);
 
-                break;
-            }
+    Return_Spu_Error(spu);
+}
 
-            case DIV: {
-                int second_num = 0;
-                int first_num = 0;
+//-----------------------------------------------------------------------------
 
-                StackPop(&spu->stk, &second_num);
-                StackPop(&spu->stk, &first_num);
+int RunJumpWithCondition(SPU_t *spu, int command) {
 
-                StackPush(&spu->stk, first_num / second_num);
+    Return_If_Spu_Error(spu);
 
-                break;
-            }
+    int num_1 = 0;
+    int num_2 = 0;
 
-            case OUT: {
-                int result = 0;
-                StackPop(&spu->stk, &result);
+    StackPop(&spu->stk, &num_2);
+    StackPop(&spu->stk, &num_1);
 
-                printf("\nResult is %d\n\n", result);
+    bool compare_result = false;
 
-                break;
-            }
+    switch(command) {
+        case JB:
+            compare_result = num_1 < num_2;
+            break;
 
-            case MUL: {
-                int second_num = 0;
-                int first_num = 0;
+        case JBE:
+            compare_result = num_1 <= num_2;
+            break;
 
-                StackPop(&spu->stk, &second_num);
-                StackPop(&spu->stk, &first_num);
+        case JA:
+            compare_result = num_1 > num_2;
+            break;
 
-                StackPush(&spu->stk, first_num * second_num);
+        case JAE:
+            compare_result = num_1 >= num_2;
+            break;
 
-                break;
-            }
+        case JE:
+            compare_result = num_1 == num_2;
+            break;
 
-            case POW: {
-                int second_num = 0;
-                int first_num = 0;
+        case JNE:
+            compare_result = num_1 != num_2;
+            break;
 
-                StackPop(&spu->stk, &second_num);
-                StackPop(&spu->stk, &first_num);
-
-                StackPush(&spu->stk, pow(first_num, second_num));
-
-                break;
-            }
-
-            case SQRT: {
-                int num = 0;
-
-                StackPop(&spu->stk, &num);
-                StackPush(&spu->stk, sqrt(num));
-
-                break;
-            }
-
-            case POPREG:
-                switch(spu->code[spu->counter++]) {
-                    case AX:
-                        StackPop(&spu->stk, &spu->AX);
-                        break;
-
-                    case BX:
-                        StackPop(&spu->stk, &spu->BX);
-                        break;
-
-                    case CX:
-                        StackPop(&spu->stk, &spu->CX);
-                        break;
-
-                    case DX:
-                        StackPop(&spu->stk, &spu->CX);
-                        break;
-
-                    case RV:
-                        StackPop(&spu->stk, &spu->RV);
-
-                    default:
-                        break;
-                }
-
-                break;
-
-            case PUSHREG:
-                switch(spu->code[spu->counter++]) {
-                    case AX:
-                        StackPush(&spu->stk, spu->AX);
-                        break;
-
-                    case BX:
-                        StackPush(&spu->stk, spu->BX);
-                        break;
-
-                    case CX:
-                        StackPush(&spu->stk, spu->CX);
-                        break;
-
-                    case DX:
-                        StackPush(&spu->stk, spu->CX);
-                        break;
-
-                    case RV:
-                        StackPush(&spu->stk, spu->RV);
-
-                    default:
-                        break;
-                }
-
-                break;
-
-            case IN: {
-                printf("Enter number\n");
-                int num = 0;
-                scanf("%d", &num);
-
-                StackPush(&spu->stk, num);
-
-                break;
-            }
-
-            case JUMP: {
-                spu->counter = spu->code[spu->counter];
-
-                break;                                    // +2 это потому что версия и константа
-            }                                             // убери науъй это пожалуйста->
-
-            case JB: {
-                int num_1 = 0;
-                int num_2 = 0;
-                StackPop(&spu->stk, &num_2);
-                StackPop(&spu->stk, &num_1);
-
-                if (num_1 < num_2)
-                    spu->counter = spu->code[spu->counter];  // :)
-                else
-                    spu->counter++;
-
-                break;
-            }
-
-            case JBE: {
-                int num_1 = 0;
-                int num_2 = 0;
-                StackPop(&spu->stk, &num_2);
-                StackPop(&spu->stk, &num_1);
-
-                if (num_1 <= num_2)
-                    spu->counter = spu->code[spu->counter];  // ;D
-                else
-                    spu->counter++;
-
-                break;
-            }
-
-            case JA: {
-                int num_1 = 0;
-                int num_2 = 0;
-                StackPop(&spu->stk, &num_2);
-                StackPop(&spu->stk, &num_1);
-
-                if (num_1 > num_2)
-                    spu->counter = spu->code[spu->counter];  // X(
-                else
-                    spu->counter++;
-
-                break;
-            }
-
-            case JAE: {
-                int num_1 = 0;
-                int num_2 = 0;
-                StackPop(&spu->stk, &num_2);
-                StackPop(&spu->stk, &num_1);
-
-                if (num_1 >= num_2)
-                    spu->counter = spu->code[spu->counter];
-                else
-                    spu->counter++;
-
-                break;
-            }
-
-            case JE: {
-                int num_1 = 0;
-                int num_2 = 0;
-                StackPop(&spu->stk, &num_2);
-                StackPop(&spu->stk, &num_1);
-
-                if (num_1 == num_2)
-                    spu->counter = spu->code[spu->counter];
-                else
-                    spu->counter++;
-
-                break;
-            }
-
-            case JNE: {
-                int num_1 = 0;
-                int num_2 = 0;
-                StackPop(&spu->stk, &num_2);
-                StackPop(&spu->stk, &num_1);
-
-                if (num_1 != num_2)
-                    spu->counter = spu->code[spu->counter];
-                else
-                    spu->counter++;
-
-                break;
-            }
-
-            case CALL:
-                StackPush(&spu->ret_addr, spu->counter + 1);
-                spu->counter = spu->code[spu->counter];
-
-                break;
-
-            case RET: {
-                int addres = 0;
-                StackPop(&spu->ret_addr, &addres);
-
-                spu->counter = addres;
-
-                break;
-            }
-
-            case PUSHM: {
-                switch(spu->code[spu->counter++]) {
-                    case AX:
-                        StackPush(&spu->stk, RAM[spu->AX]);
-                        break;
-
-                    case BX:
-                        StackPush(&spu->stk, RAM[spu->BX]);
-                        break;
-
-                    case CX:
-                        StackPush(&spu->stk, RAM[spu->CX]);
-                        break;
-
-                    case DX:
-                        StackPush(&spu->stk, RAM[spu->DX]);
-                        break;
-
-                    case RV:
-                        RAM[spu->RV] = num;
-                        break;
-
-                    default:
-                        break;
-                }
-
-                break;
-            }
-
-            case POPM: {
-                switch(spu->code[spu->counter++]) {
-                    int num = 0;
-                    StackPop(&spu->stk, &num);
-
-                    case AX:
-                        RAM[spu->AX] = num;
-                        break;
-
-                    case BX:
-                        RAM[spu->BX] = num;
-                        break;
-
-                    case CX:
-                        RAM[spu->CX] = num;
-                        break;
-
-                    case DX:
-                        RAM[spu->DX] = num;
-                        break;
-
-                    case RV:
-                        RAM[spu->RV] = num;
-                        break;
-
-                    default:
-                        break;
-                }
-
-                break;
-            }
-
-            case HLT:
-                end_of_reading = false;
-                break;
-
-            default:
-                printf("Something got wrong. Calculating is ended.\n");
-                end_of_reading = false;
-                break;
-
-        }
+        default:
+            return Spu_Command_Error;
 
     }
+
+    if (compare_result)
+        spu->counter = spu->code[spu->counter];
+    else
+        spu->counter++;
+
+ON_DEBUG(printf("Jump: jump result is %d, numbers are %d and %d\n", compare_result, num_1, num_2));
+
+    Return_Spu_Error(spu);
 }
+
+//-----------------------------------------------------------------------------
+
+int RunJumpWhitoutCondition(SPU_t *spu, int command) {
+
+    Return_If_Spu_Error(spu);
+
+    spu->counter = spu->code[spu->counter];
+
+    Return_Spu_Error(spu);
+}
+
+//-----------------------------------------------------------------------------
+
+int RunPushreg(SPU_t *spu, int command) {
+
+    Return_If_Spu_Error(spu);
+
+    int reg_num = spu->code[spu->counter++];
+    StackPush(&spu->stk, spu->registers[reg_num]);
+
+    Return_Spu_Error(spu);
+}
+
+//-----------------------------------------------------------------------------
+
+int RunPopreg(SPU_t *spu, int command) {
+
+    Return_If_Spu_Error(spu);
+
+    int reg_num = spu->code[spu->counter++];
+    StackPop(&spu->stk, &spu->registers[reg_num]);
+
+    Return_Spu_Error(spu);
+}
+
+//-----------------------------------------------------------------------------
+
+int RunOut(SPU_t *spu, int command) {
+
+    Return_If_Spu_Error(spu);
+
+    int result = 0;
+    StackPop(&spu->stk, &result);
+
+    printf("\nResult is %d\n\n", result);
+
+    Return_Spu_Error(spu);
+}
+
+//-----------------------------------------------------------------------------
+
+int RunUnaryMathOperation(SPU_t *spu, int command) {
+
+    Return_If_Spu_Error(spu);
+
+    int num = 0;
+    int calculation_result = 0;
+
+    StackPop(&spu->stk, &num);
+
+    switch(command) {
+        case SQRT:
+            calculation_result = int(sqrt(num));
+            break;
+
+        default:
+            return Spu_Command_Error;
+            break;
+    }
+
+    StackPush(&spu->stk, calculation_result);
+
+    Return_Spu_Error(spu);
+}
+
+//-----------------------------------------------------------------------------
+
+int RunIn(SPU_t *spu, int command) {
+
+    Return_If_Spu_Error(spu);
+
+    printf("Enter number\n");
+    int num = 0;
+    scanf("%d", &num);
+
+    StackPush(&spu->stk, num);
+
+    Return_Spu_Error(spu);
+}
+
+//-----------------------------------------------------------------------------
+
+int RunRet(SPU_t *spu, int command) {
+
+    Return_If_Spu_Error(spu);
+
+    int addres = 0;
+    StackPop(&spu->ret_addr, &addres);
+
+    spu->counter = addres;
+
+    Return_Spu_Error(spu);
+}
+
+//-----------------------------------------------------------------------------
+
+int RunPopM(SPU_t *spu, int command) {
+
+    Return_If_Spu_Error(spu);
+
+    int num = 0;
+    StackPop(&spu->stk, &num);
+
+    int register_number = spu->code[spu->counter++];
+    int register_value = spu->registers[register_number];
+    spu->RAM[register_value] = num;
+
+    Return_Spu_Error(spu);
+}
+
+//-----------------------------------------------------------------------------
+
+int RunDraw(SPU_t *spu, int command) {
+
+    Return_If_Spu_Error(spu);
+
+    int square_side_size = int(sqrt(spu->ram_size));
+
+    for (int curr_num = 0; curr_num < spu->ram_size; curr_num++) {
+
+        printf("%c", spu->RAM[curr_num]);
+        if ((curr_num + 1) % square_side_size == 0)
+            printf("\n");
+    }
+
+    Return_Spu_Error(spu);
+}
+
+//-----------------------------------------------------------------------------
+
+int RunPushM(SPU_t *spu, int command) {
+
+    Return_If_Spu_Error(spu);
+
+    int register_number = spu->code[spu->counter++];
+    int register_value = spu->registers[register_number];
+    int RAM_cell_value = spu->RAM[register_value];
+    StackPush(&spu->stk, RAM_cell_value);
+
+    Return_Spu_Error(spu);
+}
+
+//-----------------------------------------------------------------------------
+
+int RunCall(SPU_t *spu, int command) {
+
+    Return_If_Spu_Error(spu);
+
+    StackPush(&spu->ret_addr, spu->counter + 1);
+    spu->counter = spu->code[spu->counter];
+
+    Return_Spu_Error(spu);
+}
+
+//-----------------------------------------------------------------------------
+
+int RunPush(SPU_t *spu, int command) {
+
+    Return_If_Spu_Error(spu);
+
+    StackPush(&spu->stk, spu->code[spu->counter++]);
+
+    Return_Spu_Error(spu);
+}
+
+//=============================================================================
+
+int RunCurrentCommand(SPU_t *spu, int curr_command) {
+
+    Return_If_Spu_Error(spu);
+
+    for (int curr_num = 0; curr_num < COMMANDS_COUNT; curr_num++)
+
+        if (Commands_fuctions_array[curr_num].command_num == curr_command)
+            Commands_fuctions_array[curr_num].command_function_ptr(spu, curr_command);
+
+    Return_Spu_Error(spu);
+}
+
+//-----------------------------------------------------------------------------
+
+int SpuRun(SPU_t *spu) {
+
+    Return_If_Spu_Error(spu);
+
+    while (spu->counter < spu->commands_count) {
+
+ON_DEBUG(printf("Itarration of bin cycle number %d. Curr command is %d or %s\n",
+                spu->counter, spu->code[spu->counter],
+                commands_array[spu->code[spu->counter]].command_name));
+
+        Return_If_Spu_Error(spu);
+
+ON_DEBUG(SpuDump(spu, __FILE__, __FUNCTION__, __LINE__));
+
+        int curr_command = spu->code[spu->counter++];
+        int curr_error = 0;
+
+        if (curr_command != HLT)
+            curr_error = RunCurrentCommand(spu, curr_command);
+        else
+            return No_Spu_Error;
+
+        if (curr_error != No_Spu_Error)
+            return Spu_Command_Error;
+    }
+
+    Return_Spu_Error(spu);
+}
+
+//=============================================================================
 
 void SpuDtor(SPU_t *spu) {
 
     StackDtor(&spu->stk);
+    // Работает долго, поэтому убрала
     /*
     if (spu->code != NULL) {
         for (int counter = 0; counter < spu->commands_count; counter++)
@@ -397,15 +428,19 @@ void SpuDtor(SPU_t *spu) {
 
     }
     */
-    free(spu->code);
+    if (spu->code != NULL)
+        free(spu->code);
+
+    if (spu->RAM != NULL)
+        free(spu->RAM);
 
     spu->commands_count = POISON;
-    spu->counter = POISON;
-    spu->AX = POISON;
-    spu->BX = POISON;
-    spu->CX = POISON;
+    spu->counter = POISON;;
     spu->code = NULL;
+    spu->RAM = NULL;
 }
+
+//-----------------------------------------------------------------------------
 
 int SpuVerify(SPU_t *spu) {
 
@@ -429,9 +464,9 @@ int SpuVerify(SPU_t *spu) {
     return error;
 }
 
-void SpuDump(SPU_t *spu, const char *file_name, const char *function_name, int line_number) {
+//-----------------------------------------------------------------------------
 
-    // check file_name and function_name if NULL
+void SpuDump(SPU_t *spu, const char *file_name, const char *function_name, int line_number) {
 
     int error = SpuVerify(spu);
 
@@ -447,7 +482,7 @@ void SpuDump(SPU_t *spu, const char *file_name, const char *function_name, int l
 
     if (error & Code_Error) {
 
-        fprintf(SEREGA, "ERROR! Code buffer is wrong. Code pointer is [%p]\n\n", spu->code);    // Working
+        fprintf(SEREGA, "ERROR! Code buffer is wrong. Code pointer is [%p]\n\n", spu->code);
         return;
     }
 
@@ -462,7 +497,15 @@ void SpuDump(SPU_t *spu, const char *file_name, const char *function_name, int l
     if (!(error & Spu_Size_Error) && !(error & Counter_Error))
         fprintf(SEREGA, "Size is %d, counter is %d\n\n", spu->commands_count, spu->counter);
 
-    fprintf(SEREGA, "RV = %d, AX = %d, BX = %d, CX = %d\n\n", spu->RV, spu->AX, spu->BX, spu->CX);
+    fprintf(SEREGA, "---------RAM----------\n");
+    for (int curr_num = 0; curr_num < spu->ram_size; curr_num++)
+        fprintf(SEREGA, "[%d] ", spu->RAM[curr_num]);
+    fprintf(SEREGA, "\n\n");
+
+    fprintf(SEREGA, "---------REGISTERS--------\n");
+    for (int curr_num = 0; curr_num < REGISTERS_COUNT; curr_num++)
+        fprintf(SEREGA, "[%d] ", spu->registers[REGISTERS_COUNT]);
+    fprintf(SEREGA, "\n\n");
 
     fprintf(SEREGA, "-----------------------\nCode Array: \n");
 
@@ -477,3 +520,5 @@ void SpuDump(SPU_t *spu, const char *file_name, const char *function_name, int l
     fprintf(SEREGA, "^^\n\n===============================\n\n");
 
 }
+
+//=============================================================================
