@@ -1,0 +1,26 @@
+IN 
+POPREG AX 	; принимаем значения 
+PUSHREG AX
+CALL :1		; AX это n 
+PUSHREG RV
+OUT
+HLT 
+:1		; сама функция
+POPREG AX	; n-1 кладем в стек --> для функции верхнее в стеке - переданное значение
+PUSHREG AX
+PUSHREG AX	; приняли n в регистр и сложили обратно
+PUSH 1
+JA :2		; если n > 1 --> прыгаем
+POPREG RV
+RET
+:2		; иначе --> call f(n-1) 
+PUSHREG AX	
+PUSH -1		
+ADD		; теперь в стеке лежат [n][n-1], верхнее - передаваемое значение
+CALL :1
+PUSHREG RV	; f(n-1) * n
+MUL
+POPREG RV
+RET
+HLT
+

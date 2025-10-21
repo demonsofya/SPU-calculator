@@ -1,0 +1,70 @@
+IN 		; круг в поле 11 * 11
+POPREG AX
+PUSH 0
+POPREG BX
+PUSH 0
+POPREG CX
+
+:1
+PUSHREG BX	; Перевод координат  
+PUSH -5
+ADD
+PUSH 2
+POW
+PUSHREG CX
+PUSH -5
+ADD
+PUSH 2
+POW
+PUSH 2
+MUL
+ADD
+PUSHREG AX
+PUSH 2
+POW
+JA :0		; Если удовлетворяют уравнению круга		
+PUSH 11		; Если не круг
+PUSHREG CX
+MUL
+PUSHREG BX
+ADD
+POPREG DX
+PUSH 42
+POPM [DX]
+JUMP :2
+
+:0		; Если круг
+PUSH 11
+PUSHREG CX
+MUL
+PUSHREG BX
+ADD
+POPREG DX
+PUSH 45
+POPM [DX]
+
+:2		; Прибавление координат
+PUSHREG BX
+PUSH 1
+ADD
+POPREG BX
+PUSHREG BX
+PUSH 10
+JBE :3
+PUSH 0
+POPREG BX
+PUSHREG CX
+PUSH 1
+ADD
+POPREG CX
+
+:3
+PUSHREG CX	; Конец
+PUSH 10
+JBE :4
+DRAW
+HLT
+
+:4		;  Цикл
+JUMP :1
+HLT

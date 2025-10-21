@@ -1,28 +1,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
-#include <sys/stat.h>
-#include <assert.h>
 
 #include "buffer.h"
-#include "stack.h"
 #include "../include/commands.h"
-#include "spu.h"
+#include "assembler.h"
 
-int main() {
+int main(int argc, char *argv[]) {
 
-    SPU_t spu = {};
-    SpuCtor("task_bin.txt", &spu);
-    Return_If_Spu_Error(&spu)
+    int commands_count = 0;
+    int *output_arr = NULL;
+    if (argc > 1)
+        output_arr = CreateCodeArray(argv[1], &commands_count);
+    else
+        output_arr = CreateCodeArray("Task7.txt", &commands_count);
 
-//-----------------------------------------------------------------------------
-    ON_DEBUG(SpuDump(&spu, __FILE__, __FUNCTION__, __LINE__));
-//-----------------------------------------------------------------------------
 
-    SpuRun(&spu);
+    if (argc > 2)
+        CreateBinaryFile(argv[2], commands_count, output_arr);
+    else
+        CreateBinaryFile("task_bin.txt", commands_count, output_arr);
 
-    SpuDtor(&spu);
+
+    CreateNormalFile("task_rewrite.txt", commands_count, output_arr);
 
     return 0;
 }
