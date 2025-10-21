@@ -1,81 +1,78 @@
 #ifndef COMMANDS_H_INCLUDED
 #define COMMANDS_H_INCLUDED
 
-const int INFORMATION_MEMORY_COUNT = 2;
+struct Header_Info_t {
+
+    int version;
+    int signature;
+};
+
+const Header_Info_t DEFAULT_INFORMATION = {6, 451};
+
+const int SIZE_OF_HEADER_IN_BYTES = sizeof(DEFAULT_INFORMATION) / sizeof(int);
 
 struct Command_t {
+
     char    command_name[10];
     int     command_number;
+    int     agrument_type;
+    int     hash;
 }; // массив структур
 
 enum Commands {
-    HLT             =   0,
-    PUSH            =   1,
-    OUT             =   2,
-    ADD             =   3,
-    SUB             =   4,
-    MUL             =   5,
-    DIV             =   6,
-    POW             =   7,
-    SQRT            =   8,
-    PUSHREG         =   9,
-    POPREG          =   10,
-    JUMP            =   11,
-    IN              =   12,
-    JB              =   13,  // Если строго меньше
-    JBE             =   14,  // меньше
-    JA              =   15,  // строго Больше
-    JAE             =   16,  //  больше
-    JE              =   17,  // Если равно
-    JNE             =   18,  // Если неравно
-    CALL            =   19,
-    RET             =   20,
-    PUSHM           =   21,
-    POPM            =   22,
-    DRAW            =   23,
-    COMMANDS_COUNT  =   24
+
+    HALT_COMMAND                =   0,
+    PUSH_COMMAND                =   1,
+    OUTPUT_COMMAND              =   2,
+    ADDICTION_COMMAND           =   3,
+    SUBTRACTION_COMMAND         =   4,
+    MULTIPLICATION_COMMAND      =   5,
+    DIVISION_COMMAND            =   6,
+    POW_COMMAND                 =   7,
+    SQUARE_ROOT_COMMAND         =   8,
+    PUSH_REGISTER_COMMAND       =   9,
+    POP_REGISTER_COMMAND        =   10,
+    JUMP_COMMAND                =   11,
+    IN_COMMAND                  =   12,
+    JUMP_BELOW_COMMAND          =   13,  // Если строго меньше
+    JUMP_BELOW_EQUAL_COMMAND    =   14,  // меньше
+    JUMP_ABOVE_COMMAND          =   15,  // строго Больше
+    JUMP_ABOVE_EQUAL_COMMAND    =   16,  //  больше
+    JUMP_EQUAL_COMMAND          =   17,  // Если равно
+    JUMP_NOT_EQUAL_COMMAND      =   18,  // Если неравно
+    CALL_FUNCTION_COMMAND       =   19,
+    RETERN_COMMAND              =   20,
+    PUSH_MEMORY_COMMAND         =   21,
+    POP_MEMORY_COMMAND          =   22,
+    DRAW_COMMAND                =   23,
+    COMMANDS_COUNT              =   24
 };
 
-const Command_t commands_array[COMMANDS_COUNT] = {
+enum Commans_arguments_types {
 
-    {"HLT",     HLT     },
-    {"PUSH",    PUSH    },
-    {"OUT",     OUT     },
-    {"ADD",     ADD     },
-    {"SUB",     SUB     },
-    {"MUL",     MUL     },
-    {"DIV",     DIV     },
-    {"POW",     POW     },
-    {"SQRT",    SQRT    },
-    {"PUSHREG", PUSHREG },
-    {"POPREG",  POPREG  },
-    {"JUMP",    JUMP    },
-    {"IN",      IN      },
-    {"JB",      JB      },
-    {"JBE",     JBE     },
-    {"JA",      JA      },
-    {"JAE",     JAE     },
-    {"JE",      JE      },
-    {"JNE",     JNE     },
-    {"CALL",    CALL    },
-    {"RET",     RET     },
-    {"PUSHM",   PUSHM   },
-    {"POPM",    POPM    },
-    {"DRAW",    DRAW    }
-
+    NO_ARGUMENT         =   0,
+    NUMBER_ARGUMENT     =   1,
+    REGISTER_ARGUMENT   =   2,
+    RAM_ARGUMENT        =   3
 };
 
-enum Information {
+
+/*
+enum DEFAULT_INFORMATION {
     Version     = 6,
     Constant    = 451
 };
+*/
 
 struct Register_t {
-    char reg_name[3];
+
+    char reg_name[10];
     int reg_num;
+    int reg_hash;
 };
 
 enum Registers {
+
     AX = 0,
     BX = 1,
     CX = 2,
@@ -84,7 +81,8 @@ enum Registers {
     REGISTERS_COUNT = 5
 };
 
-const Register_t registers_array[REGISTERS_COUNT] = {
+static Register_t registers_array[REGISTERS_COUNT] = {
+
     {"AX", AX},
     {"BX", BX},
     {"CX", CX},

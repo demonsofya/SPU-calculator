@@ -1,7 +1,7 @@
 #ifndef SPU_H_INCLUDED
 #define SPU_H_INCLUDED
 
-#include "stack.h"
+#include "lib/stack/stack.h"
 #include "../include/commands.h"
 
 //#define DEBUG
@@ -49,19 +49,21 @@ const size_t RAM_DEFAULT_SIZE = 121;
 //-----------------------------------------------------------------------------
 
 struct SPU_t {
-    Stack_t stk = {};
-    Stack_t ret_addr = {};
-    int *RAM    = NULL;
-    int ram_size = 0;
-    int *code   = NULL;
-    int commands_count = 0;
-    int counter = 0;
-    int registers[10] = {};
-    int version   = 6;
-    int signature = 451;
+
+    Stack_t stk;
+    Stack_t ret_addr;
+    int *RAM;
+    int ram_size;
+    int *code;
+    int commands_count;
+    int counter;
+    int registers[10];
+    int version;
+    int signature;
 };
 
 enum SpuErr_t {
+
     No_Spu_Error        = 0,
     Stack_Error         = 1 << 0,
     Code_Error          = 1 << 1,
@@ -74,6 +76,7 @@ enum SpuErr_t {
 };
 
 struct Command_Function_t {
+
     int     command_num;
     int     (*command_function_ptr) (SPU_t *spu, int command);
 };
@@ -96,17 +99,17 @@ int RunUnaryMathOperation(SPU_t *spu, int command);
 int RunJumpWithCondition(SPU_t *spu, int command);
 int RunJumpWhitoutCondition(SPU_t *spu, int command);
 
-int RunPushreg(SPU_t *spu, int command);
-int RunPopreg(SPU_t *spu, int command);
+int RunPushRegister(SPU_t *spu, int command);
+int RunPopRegister(SPU_t *spu, int command);
 
 int RunOut(SPU_t *spu, int command);
 int RunIn(SPU_t *spu, int command);
 
 int RunCall(SPU_t *spu, int command);
-int RunRet(SPU_t *spu, int command);
+int RunRetern(SPU_t *spu, int command);
 
-int RunPushM(SPU_t *spu, int command);
-int RunPopM(SPU_t *spu, int command);
+int RunPushMemory(SPU_t *spu, int command);
+int RunPopMemory(SPU_t *spu, int command);
 
 int RunDraw(SPU_t *spu, int command);
 
@@ -125,34 +128,36 @@ void SpuDump(SPU_t *spu, const char *file_name, const char *function_name, int l
 
 //-----------------------------------------------------------------------------
 
-static Command_Function_t Commands_fuctions_array[COMMANDS_COUNT] = {
+const Command_Function_t Commands_fuctions_array[COMMANDS_COUNT] = {
 
-    {HLT,     NULL                      },
-    {PUSH,    RunPush                   },
-    {OUT,     RunOut                    },
-    {ADD,     RunBinaryMathOperation    },
-    {SUB,     RunBinaryMathOperation    },
-    {MUL,     RunBinaryMathOperation    },
-    {DIV,     RunBinaryMathOperation    },
-    {POW,     RunBinaryMathOperation    },
-    {SQRT,    RunUnaryMathOperation     },
-    {PUSHREG, RunPushreg                },
-    {POPREG,  RunPopreg                 },
-    {JUMP,    RunJumpWhitoutCondition   },
-    {IN,      RunIn                     },
-    {JB,      RunJumpWithCondition      },
-    {JBE,     RunJumpWithCondition      },
-    {JA,      RunJumpWithCondition      },
-    {JAE,     RunJumpWithCondition      },
-    {JE,      RunJumpWithCondition      },
-    {JNE,     RunJumpWithCondition      },
-    {CALL,    RunCall                   },
-    {RET,     RunRet                    },
-    {PUSHM,   RunPushM                  },
-    {POPM,    RunPopM                   },
-    {DRAW,    RunDraw                   }
+    {HALT_COMMAND,              NULL                      },
+    {PUSH_COMMAND,              RunPush                   },
+    {OUTPUT_COMMAND,            RunOut                    },
+    {ADDICTION_COMMAND,         RunBinaryMathOperation    },
+    {SUBTRACTION_COMMAND,       RunBinaryMathOperation    },
+    {MULTIPLICATION_COMMAND,    RunBinaryMathOperation    },
+    {DIVISION_COMMAND,          RunBinaryMathOperation    },
+    {POW_COMMAND,               RunBinaryMathOperation    },
+    {SQUARE_ROOT_COMMAND,       RunUnaryMathOperation     },
+    {PUSH_REGISTER_COMMAND,     RunPushRegister           },
+    {POP_REGISTER_COMMAND,      RunPopRegister            },
+    {JUMP_COMMAND,              RunJumpWhitoutCondition   },
+    {IN_COMMAND,                RunIn                     },
+    {JUMP_BELOW_COMMAND,        RunJumpWithCondition      },
+    {JUMP_BELOW_EQUAL_COMMAND,  RunJumpWithCondition      },
+    {JUMP_ABOVE_COMMAND,        RunJumpWithCondition      },
+    {JUMP_ABOVE_EQUAL_COMMAND,  RunJumpWithCondition      },
+    {JUMP_EQUAL_COMMAND,        RunJumpWithCondition      },
+    {JUMP_NOT_EQUAL_COMMAND,    RunJumpWithCondition      },
+    {CALL_FUNCTION_COMMAND,     RunCall                   },
+    {RETERN_COMMAND,            RunRetern                 },
+    {PUSH_MEMORY_COMMAND,       RunPushMemory             },
+    {POP_MEMORY_COMMAND,        RunPopMemory              },
+    {DRAW_COMMAND,              RunDraw                   }
 
 };
+
+// ���� ������ ����� ������������ �����, ��� � ��������� ��� ������� � ��������
 
 //=============================================================================
 

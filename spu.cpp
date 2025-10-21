@@ -4,10 +4,10 @@
 
 #include "spu.h"
 #include "../include/commands.h"
-#include "stack.h"
+#include "lib/stack/stack.h"
 #include "math.h"
 #include "assert.h"
-#include "buffer.h"
+#include "lib/onegin/buffer.h"
 
 #define SEREGA stderr
 
@@ -24,13 +24,13 @@ int CheckVersionAndSignature(SPU_t *spu, FILE *file_ptr) {
     int signature = 0;
     fread(&signature, 1, sizeof(int), file_ptr);
 
-    if (spu->version != version) {
+    if (version != DEFAULT_INFORMATION.version) {
 
         printf("Version check is wrong.\n");
         return Spu_Version_Error;
     }
 
-    if (spu->signature != signature) {
+    if (signature != DEFAULT_INFORMATION.signature) {
 
         printf("Signature check is wrong.\n");
         return Spu_Signature_Error;
@@ -110,23 +110,25 @@ int RunBinaryMathOperation(SPU_t *spu, int command) {
     int calculation_result = 0;
 
     switch(command) {
-        case ADD:
+        case ADDICTION_COMMAND:
             calculation_result = first_num + second_num;
             break;
 
-        case SUB:
+        case SUBTRACTION_COMMAND:
             calculation_result = first_num - second_num;
             break;
 
-        case DIV:
+        case DIVISION_COMMAND:
+            if (second_num == 0)
+                return Spu_Command_Error;
             calculation_result = first_num / second_num;
             break;
 
-        case MUL:
+        case MULTIPLICATION_COMMAND:
             calculation_result = first_num * second_num;
             break;
 
-        case POW:
+        case POW_COMMAND:
             calculation_result = int(pow(first_num, second_num));
             break;
 
@@ -156,27 +158,27 @@ int RunJumpWithCondition(SPU_t *spu, int command) {
     bool compare_result = false;
 
     switch(command) {
-        case JB:
+        case JUMP_BELOW_COMMAND:
             compare_result = num_1 < num_2;
             break;
 
-        case JBE:
+        case JUMP_BELOW_EQUAL_COMMAND:
             compare_result = num_1 <= num_2;
             break;
 
-        case JA:
+        case JUMP_ABOVE_COMMAND:
             compare_result = num_1 > num_2;
             break;
 
-        case JAE:
+        case JUMP_ABOVE_EQUAL_COMMAND:
             compare_result = num_1 >= num_2;
             break;
 
-        case JE:
+        case JUMP_EQUAL_COMMAND:
             compare_result = num_1 == num_2;
             break;
 
-        case JNE:
+        case JUMP_NOT_EQUAL_COMMAND:
             compare_result = num_1 != num_2;
             break;
 
@@ -208,7 +210,7 @@ int RunJumpWhitoutCondition(SPU_t *spu, int command) {
 
 //-----------------------------------------------------------------------------
 
-int RunPushreg(SPU_t *spu, int command) {
+int RunPushRegister(SPU_t *spu, int command) {
 
     Return_If_Spu_Error(spu);
 
@@ -220,7 +222,7 @@ int RunPushreg(SPU_t *spu, int command) {
 
 //-----------------------------------------------------------------------------
 
-int RunPopreg(SPU_t *spu, int command) {
+int RunPopRegister(SPU_t *spu, int command) {
 
     Return_If_Spu_Error(spu);
 
@@ -256,7 +258,7 @@ int RunUnaryMathOperation(SPU_t *spu, int command) {
     StackPop(&spu->stk, &num);
 
     switch(command) {
-        case SQRT:
+        case SQUARE_ROOT_COMMAND:
             calculation_result = int(sqrt(num));
             break;
 
@@ -287,7 +289,7 @@ int RunIn(SPU_t *spu, int command) {
 
 //-----------------------------------------------------------------------------
 
-int RunRet(SPU_t *spu, int command) {
+int RunRetern(SPU_t *spu, int command) {
 
     Return_If_Spu_Error(spu);
 
@@ -301,7 +303,7 @@ int RunRet(SPU_t *spu, int command) {
 
 //-----------------------------------------------------------------------------
 
-int RunPopM(SPU_t *spu, int command) {
+int RunPopMemory(SPU_t *spu, int command) {
 
     Return_If_Spu_Error(spu);
 
@@ -335,7 +337,7 @@ int RunDraw(SPU_t *spu, int command) {
 
 //-----------------------------------------------------------------------------
 
-int RunPushM(SPU_t *spu, int command) {
+int RunPushMemory(SPU_t *spu, int command) {
 
     Return_If_Spu_Error(spu);
 
@@ -376,10 +378,14 @@ int RunCurrentCommand(SPU_t *spu, int curr_command) {
 
     Return_If_Spu_Error(spu);
 
+    /*
     for (int curr_num = 0; curr_num < COMMANDS_COUNT; curr_num++)
 
         if (Commands_fuctions_array[curr_num].command_num == curr_command)
             Commands_fuctions_array[curr_num].command_function_ptr(spu, curr_command);
+    */
+
+    Commands_fuctions_array[curr_command].command_function_ptr(spu, curr_command);
 
     Return_Spu_Error(spu);
 }
@@ -403,7 +409,7 @@ ON_DEBUG(SpuDump(spu, __FILE__, __FUNCTION__, __LINE__));
         int curr_command = spu->code[spu->counter++];
         int curr_error = 0;
 
-        if (curr_command != HLT)
+        if (curr_command != HALT_COMMAND)
             curr_error = RunCurrentCommand(spu, curr_command);
         else
             return No_Spu_Error;
