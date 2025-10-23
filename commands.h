@@ -1,6 +1,11 @@
 #ifndef COMMANDS_H_INCLUDED
 #define COMMANDS_H_INCLUDED
 
+
+//-----------------------------------------------------------------------------
+
+#define NEW_COMMAND_ASM(
+
 struct Header_Info_t {
 
     int version;
