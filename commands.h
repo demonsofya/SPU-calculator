@@ -4,7 +4,17 @@
 
 //-----------------------------------------------------------------------------
 
-#define NEW_COMMAND_ASM(
+#define NEW_COMMAND_ASM(name, number, arg_type, funt_ptr) {name, number, arg_type, CountStringHashDJB2(name), __FILE__, __LINE__, "{#name, #number, #arg_type, CountStringHashDJB2(name), __FILE__, __LINE__}" }
+#define NEW_COMMAND_SPU(name, number, arg_type, funt_ptr) {number, func_ptr, __FILE__, __LINE__, "{#number, #func_ptr, __FILE__, __LINE__}" }
+
+#ifdef COMPILE_ASM
+    #define NEW_COMMAND NEW_COMMAND_ASM
+#endif
+
+#ifdef COMPILE_SPU
+    #define NEW_COMMAND NEW_COMMAND_SPU
+#endif
+
 
 struct Header_Info_t {
 
@@ -17,11 +27,20 @@ const Header_Info_t DEFAULT_INFORMATION = {6, 451};
 const int SIZE_OF_HEADER_IN_BYTES = sizeof(DEFAULT_INFORMATION) / sizeof(int);
 
 struct Command_t {
+    #ifdef COMPILE_ASM
+        char    command_name[10];
+        int     command_number;
+        int     agrument_type;
+        int     hash;
+    #endif
 
-    char    command_name[10];
-    int     command_number;
-    int     agrument_type;
-    int     hash;
+    #ifdef COMPILE_SPU
+        int     command_number;
+        int     (*command_function_ptr) (SPU_t *spu, int command);
+    #endif
+        const char *file_name_of_source_code;
+        int         line_number_in_source_code;
+        const char *line_content_in_source_code;
 }; // массив структур
 
 enum Commands {
@@ -59,6 +78,36 @@ enum Commans_arguments_types {
     NUMBER_ARGUMENT     =   1,
     REGISTER_ARGUMENT   =   2,
     RAM_ARGUMENT        =   3
+};
+
+
+const Command_t commands_array[COMMANDS_COUNT] = {
+
+    NEW_COMMAND("HLT",     HALT_COMMAND,               NO_ARGUMENT,         NULL                    ),
+    NEW_COMMAND("PUSH",    PUSH_COMMAND,               NUMBER_ARGUMENT,     RunPush                 ),
+    NEW_COMMAND("OUT",     OUTPUT_COMMAND,             NO_ARGUMENT,         RunOut                  ),
+    NEW_COMMAND("ADD",     ADDICTION_COMMAND,          NO_ARGUMENT,         RunBinaryMathOperation  ),
+    NEW_COMMAND("SUB",     SUBTRACTION_COMMAND,        NO_ARGUMENT,         RunBinaryMathOperation  ),
+    NEW_COMMAND("MUL",     MULTIPLICATION_COMMAND,     NO_ARGUMENT,         RunBinaryMathOperation  ),
+    NEW_COMMAND("DIV",     DIVISION_COMMAND,           NO_ARGUMENT,         RunBinaryMathOperation  ),
+    NEW_COMMAND("POW",     POW_COMMAND,                NO_ARGUMENT,         RunBinaryMathOperation  ),
+    NEW_COMMAND("SQRT",    SQUARE_ROOT_COMMAND,        NO_ARGUMENT,         RunUnaryMathOperation   ),
+    NEW_COMMAND("PUSHREG", PUSH_REGISTER_COMMAND,      REGISTER_ARGUMENT,   RunPushRegister         ),
+    NEW_COMMAND("POPREG",  POP_REGISTER_COMMAND,       REGISTER_ARGUMENT,   RunPopRegister          ),
+    NEW_COMMAND("JUMP",    JUMP_COMMAND,               NUMBER_ARGUMENT,     RunJumpWhitoutCondition ),
+    NEW_COMMAND("IN",      IN_COMMAND,                 NO_ARGUMENT,         RunIn                   ),
+    NEW_COMMAND("JB",      JUMP_BELOW_COMMAND,         NUMBER_ARGUMENT,     RunJumpWithCondition    ),
+    NEW_COMMAND("JBE",     JUMP_BELOW_EQUAL_COMMAND,   NUMBER_ARGUMENT,     RunJumpWithCondition    ),
+    NEW_COMMAND("JA",      JUMP_ABOVE_COMMAND,         NUMBER_ARGUMENT,     RunJumpWithCondition    ),
+    NEW_COMMAND("JAE",     JUMP_ABOVE_EQUAL_COMMAND,   NUMBER_ARGUMENT,     RunJumpWithCondition    ),
+    NEW_COMMAND("JE",      JUMP_EQUAL_COMMAND,         NUMBER_ARGUMENT,     RunJumpWithCondition    ),
+    NEW_COMMAND("JNE",     JUMP_NOT_EQUAL_COMMAND,     NUMBER_ARGUMENT,     RunJumpWithCondition    ),
+    NEW_COMMAND("CALL",    CALL_FUNCTION_COMMAND,      NUMBER_ARGUMENT,     RunCall                 ),
+    NEW_COMMAND("RET",     RETERN_COMMAND,             NO_ARGUMENT,         RunRetern               ),
+    NEW_COMMAND("PUSHM",   PUSH_MEMORY_COMMAND,        RAM_ARGUMENT,        RunPushMemory           ),
+    NEW_COMMAND("POPM",    POP_MEMORY_COMMAND,         RAM_ARGUMENT,        RunPopMemory            ),
+    NEW_COMMAND("DRAW",    DRAW_COMMAND,               NO_ARGUMENT,         RunDraw                 )
+
 };
 
 
