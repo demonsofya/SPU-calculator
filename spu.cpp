@@ -3,7 +3,7 @@
 #include <sys/stat.h>
 
 #include "spu.h"
-#include "../include/commands.h"
+//#include "../include/commands.h"
 #include "lib/stack/stack.h"
 #include "math.h"
 #include "assert.h"
@@ -381,11 +381,11 @@ int RunCurrentCommand(SPU_t *spu, int curr_command) {
     /*
     for (int curr_num = 0; curr_num < COMMANDS_COUNT; curr_num++)
 
-        if (Commands_fuctions_array[curr_num].command_num == curr_command)
-            Commands_fuctions_array[curr_num].command_function_ptr(spu, curr_command);
+        if (commands_array[curr_num].command_num == curr_command)
+            commands_array[curr_num].command_function_ptr(spu, curr_command);
     */
 
-    Commands_fuctions_array[curr_command].command_function_ptr(spu, curr_command);
+    commands_array[curr_command].command_function_ptr(spu, curr_command);
 
     Return_Spu_Error(spu);
 }
@@ -396,11 +396,12 @@ int SpuRun(SPU_t *spu) {
 
     Return_If_Spu_Error(spu);
 
+    CheckCommandsArray();
+
     while (spu->counter < spu->commands_count) {
 
-ON_DEBUG(printf("Itarration of bin cycle number %d. Curr command is %d or %s\n",
-                spu->counter, spu->code[spu->counter],
-                commands_array[spu->code[spu->counter]].command_name));
+ON_DEBUG(printf("Itarration of bin cycle number %d. Curr command is %d\n",
+                spu->counter, spu->code[spu->counter]));
 
         Return_If_Spu_Error(spu);
 
@@ -469,6 +470,26 @@ int SpuVerify(SPU_t *spu) {
 
     return error;
 }
+
+//-----------------------------------------------------------------------------
+
+bool CheckCommandsArray() {
+
+    bool result = true;
+
+    for (int curr_num = 0; curr_num < COMMANDS_COUNT; curr_num++)
+        if (commands_array[curr_num].command_number != curr_num) {
+            fprintf(SEREGA, "%s:%d error. Position in array is %d, command number is %d\n%s\n",
+                    commands_array[curr_num].file_name_of_source_code, commands_array[curr_num].line_number_in_source_code,
+                    curr_num, commands_array[curr_num].command_number,
+                    commands_array[curr_num].line_content_in_source_code);
+
+            result = false;
+        }
+
+    return result;
+}
+
 
 //-----------------------------------------------------------------------------
 

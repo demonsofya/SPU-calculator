@@ -4,13 +4,17 @@
 #include "lib/stack/stack.h"
 #include "../include/commands.h"
 
-//#define DEBUG
+#define DEBUG
 
 #ifdef DEBUG
     #define ON_DEBUG(...) __VA_ARGS__
 #else
     #define ON_DEBUG(...)
 #endif
+
+
+//-----------------------------------------------------------------------------
+
 
 //=============================================================================
 
@@ -126,8 +130,13 @@ int SpuRun(SPU_t *spu);
 int SpuVerify(SPU_t *spu);
 void SpuDump(SPU_t *spu, const char *file_name, const char *function_name, int line_number);
 
-//-----------------------------------------------------------------------------
+bool CheckCommandsArray();
 
+//-----------------------------------------------------------------------------
+#define COMPILE_SPU
+
+#include "../include/commands.h"
+/*
 const Command_Function_t Commands_fuctions_array[COMMANDS_COUNT] = {
 
     {HALT_COMMAND,              NULL                      },
@@ -156,6 +165,7 @@ const Command_Function_t Commands_fuctions_array[COMMANDS_COUNT] = {
     {DRAW_COMMAND,              RunDraw                   }
 
 };
+*/
 
 // ���� ������ ����� ������������ �����, ��� � ��������� ��� ������� � ��������
 

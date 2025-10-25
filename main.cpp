@@ -7,7 +7,7 @@
 
 #include "buffer.h"
 #include "stack.h"
-#include "../include/commands.h"
+//#include "../include/commands.h"
 #include "spu.h"
 
 int main(int argc, char *argv[]) {
